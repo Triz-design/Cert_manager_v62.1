@@ -1,0 +1,1229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Employee Certification Manager</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@0.265.0/dist/umd/lucide.min.js"></script>
+
+  <style>
+    /* Small adjustments for print/pdf */
+    @media print {
+      .no-print { display: none !important; }
+      body { 
+        background-color: #fff !important; 
+        background-image: none !important;
+        padding: 20px !important;
+      }
+      .max-w-7xl { 
+        max-width: 100% !important; 
+        margin: 0 !important;
+      }
+      .bg-gradient-to-br { 
+        background: white !important; 
+      }
+      .shadow-2xl, .shadow-xl, .shadow-md { 
+        box-shadow: none !important; 
+      }
+      .border-t-4, .rounded-xl, .rounded-lg { 
+        border: none !important;
+        border-radius: 0 !important;
+      }
+      /* Print header */
+      .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 3px solid #4472C4;
+        padding-bottom: 20px;
+      }
+      .print-logo {
+        display: inline-block !important;
+        max-width: 120px;
+        max-height: 120px;
+        margin-bottom: 10px;
+      }
+      /* Table styling for print */
+      table {
+        page-break-inside: auto;
+        border-collapse: collapse;
+        width: 100%;
+      }
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      thead {
+        display: table-header-group;
+      }
+      th {
+        background-color: #4472C4 !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        padding: 10px !important;
+        font-size: 11px !important;
+      }
+      td {
+        padding: 8px !important;
+        font-size: 10px !important;
+        border: 1px solid #ddd !important;
+      }
+      /* Status colors for print */
+      .bg-red-100 {
+        background-color: #fee !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .bg-yellow-100 {
+        background-color: #ffc !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .text-red-700 {
+        color: #c00 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .text-yellow-700 {
+        color: #f60 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+    /* Ensure small font and monospace for dates */
+    .small-pt { font-size: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Helvetica Neue", monospace; }
+
+    /* Custom styles for dropdown */
+    .dropdown-menu {
+      z-index: 60; /* Higher than modal backdrop for safety, though only one should be open */
+    }
+    
+    /* Print header - hidden by default, shown only in print */
+    .print-header {
+      display: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6 font-sans">
+
+  <div class="max-w-7xl mx-auto">
+
+    <!-- Print Header (only visible when printing) -->
+    <div class="print-header">
+      <img id="printLogo" src="" alt="Company Logo" class="print-logo" />
+      <h1 style="font-size: 24px; font-weight: bold; margin: 10px 0; color: #333;">Employee Certification Report</h1>
+      <p style="font-size: 12px; color: #666;" id="printDate"></p>
+    </div>
+
+    <!-- Header & Controls -->
+    <div class="bg-white rounded-xl shadow-2xl p-4 sm:p-6 mb-6 border-t-4 border-indigo-600">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        
+        <!-- Logo and Title -->
+        <div id="logoContainer" class="flex items-center gap-3 sm:gap-4 cursor-pointer" onclick="document.getElementById('logoInput').click()">
+          <img id="uploadedLogo" src="https://placehold.co/64x64/d0e0ff/333?text=LOGO" alt="Company Logo" class="h-14 w-14 sm:h-16 sm:w-16 object-contain rounded-full border-2 border-indigo-200 p-1" />
+          <h1 class="text-xl sm:text-3xl font-extrabold text-gray-800">Cert Manager</h1>
+          <input type="file" id="logoInput" accept="image/*" class="hidden" />
+          <label for="logoInput" class="text-indigo-500 hover:text-indigo-700 cursor-pointer text-xs sm:text-sm font-medium hover:underline no-print">Change Logo</label>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex gap-2 flex-wrap justify-end no-print">
+          
+          <button id="importBtn" class="flex items-center px-3 py-2 text-sm bg-gray-200 text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-300 transition duration-150">
+            <i data-lucide="upload" class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2"></i> Load Database
+          </button>
+          <input type="file" id="importFileInput" accept=".json" class="hidden" />
+
+          <button id="reminderSettingsBtn" class="flex items-center px-3 py-2 text-sm bg-gray-200 text-gray-700 font-semibold rounded-lg shadow-md hover:bg-gray-300 transition duration-150">
+            <i data-lucide="mail" class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2"></i> Settings
+          </button>
+          
+          <button id="addEmployeeBtn" class="flex items-center px-3 py-2 text-sm bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150">
+            <i data-lucide="user-plus" class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2"></i> Add Employee
+          </button>
+
+          <!-- Export Dropdown -->
+          <div class="relative inline-block text-left" id="exportDropdownContainer">
+            <button id="exportDropdownBtn" class="flex items-center px-3 py-2 text-sm bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition duration-150" type="button">
+              <i data-lucide="download" class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2"></i> Export/Save
+              <i data-lucide="chevron-down" class="w-4 h-4 ml-1"></i>
+            </button>
+            <div id="exportDropdownMenu" class="dropdown-menu absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5 hidden">
+              <div class="py-1">
+                <a href="#" onclick="event.preventDefault(); exportData('json')" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i data-lucide="code" class="w-4 h-4 mr-2"></i> Save Database
+                </a>
+                <a href="#" onclick="event.preventDefault(); exportData('csv')" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i data-lucide="list-ordered" class="w-4 h-4 mr-2"></i> Export to CSV
+                </a>
+                <a href="#" onclick="event.preventDefault(); exportData('excel')" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-2"></i> Export to Excel (XML)
+                </a>
+                <a href="#" onclick="event.preventDefault(); exportData('pdf')" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t mt-1 pt-1">
+                  <i data-lucide="file-text" class="w-4 h-4 mr-2"></i> Print to PDF
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="mb-6 no-print">
+      <div class="relative">
+        <i data-lucide="search" class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        <input type="text" id="searchInput" placeholder="Search by name, cert, or email..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-xl shadow-inner focus:ring-indigo-500 focus:border-indigo-500 w-full" />
+      </div>
+    </div>
+
+    <!-- Reminder Summary -->
+    <div id="reminderSummary" class="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-lg mb-6 shadow-md text-sm no-print">
+      <div class="flex items-start">
+        <i data-lucide="alert-triangle" class="w-5 h-5 mr-3 flex-shrink-0 mt-0.5"></i>
+        <div>
+          <p class="font-bold">Reminder Recipients:</p>
+          <p class="text-xs" id="recipientListDisplay">No recipients set. Click 'Settings' to configure email reminders.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="bg-white rounded-xl shadow-2xl overflow-x-auto border-2 border-gray-100">
+      <table id="certTable" class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50 sticky top-0 z-10">
+          <tr>
+            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cert Type & Details</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valid From</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valid To</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Remaining</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="certTableBody" class="bg-white divide-y divide-gray-200 small-pt">
+          <!-- Table rows will be rendered here -->
+        </tbody>
+      </table>
+      <div id="noResults" class="hidden text-center p-8 text-gray-500">
+        <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2"></i>
+        <p>No employees or certifications found matching your criteria.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Template for Form/Report/Error -->
+  <div id="modalBackdrop" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
+    <div id="modalContent" class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all scale-100 duration-300">
+      <!-- Modal content (form, settings, or confirmation) will be injected here -->
+    </div>
+  </div>
+
+
+<script>
+  // ====================================================================
+  // 1. GLOBAL STATE & TYPES
+  // ====================================================================
+
+  /** @typedef {'Certification' | 'Licence' | 'Induction'} CertType */
+  /** * @typedef {object} Certification
+   * @property {string} id
+   * @property {CertType} type
+   * @property {string} details
+   * @property {string} validFrom - YYYY-MM-DD
+   * @property {string} validTo - YYYY-MM-DD
+   */
+  /** * @typedef {object} Employee
+   * @property {string} id
+   * @property {string} firstName
+   * @property {string} lastName
+   * @property {string} dateOfBirth - YYYY-MM-DD
+   * @property {string} email
+   * @property {string} phone
+   * @property {Certification[]} certifications
+   */
+  /** * @typedef {object} CertManagerData
+   * @property {Employee[]} employees
+   * @property {string} logoBase64
+   * @property {string[]} reminderEmails
+   * @property {string} savedDate
+   */
+
+  /** @type {Employee[]} */
+  let employees = [];
+  /** @type {string} */
+  let logoBase64 = '';
+  /** @type {string[]} */
+  let reminderEmails = [];
+  /** @type {string} */
+  let searchTerm = '';
+
+  // Modal State
+  let isModalOpen = false;
+  let currentEmployee = null; // Employee | null
+  let isEditing = false;
+  let initialCertIndex = -1; // Used to focus on a new cert row in the form
+
+  // Confirmation State
+  /** @type {('employee'|'cert'|null)} */
+  let pendingDeleteType = null;
+  let pendingDeleteEmpId = null;
+  let pendingDeleteCertId = null;
+
+  // Constants
+  const EXPIRING_THRESHOLD_DAYS = 60; // Certs expiring in 60 days or less are 'expiring'
+
+  // DOM Elements
+  const certTableBody = document.getElementById('certTableBody');
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const modalContent = document.getElementById('modalContent');
+  const logoInput = document.getElementById('logoInput');
+  const searchInput = document.getElementById('searchInput');
+
+  // ====================================================================
+  // 2. UTILITY FUNCTIONS
+  // ====================================================================
+
+  /**
+   * Generates a simple unique ID string.
+   * @returns {string}
+   */
+  function generateId() {
+    return 'id_' + Math.random().toString(36).substring(2, 9);
+  }
+
+  /**
+   * Formats a date string (YYYY-MM-DD) to a locale-friendly date string.
+   * @param {string} dateString
+   * @returns {string}
+   */
+  function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString.replace(/-/g, '/')); // Fix for cross-browser date parsing issues
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return 'Invalid Date';
+    }
+  }
+
+  /**
+   * Calculates the difference in days between today and a target date.
+   * @param {string} targetDateString - YYYY-MM-DD
+   * @returns {number}
+   */
+  function getDaysRemaining(targetDateString) {
+    if (!targetDateString) return Infinity;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize today's date
+    
+    // Use targetDate.getTime() directly for consistency
+    const target = new Date(targetDateString.replace(/-/g, '/'));
+    target.setHours(0, 0, 0, 0);
+    
+    const _MS_PER_DAY = 1000 * 60 * 60 * 24;
+    return Math.ceil((target.getTime() - today.getTime()) / _MS_PER_DAY);
+  }
+
+  /**
+   * Determines the status and returns styling classes.
+   * @param {number} days
+   * @returns {{statusText: string, statusClass: string}}
+   */
+  function getExpiryStatus(days) {
+    if (days < 0) {
+      return { statusText: 'EXPIRED', statusClass: 'bg-red-100 text-red-700 font-bold border-red-300' };
+    } else if (days <= EXPIRING_THRESHOLD_DAYS) {
+      return { statusText: 'EXPIRING SOON', statusClass: 'bg-yellow-100 text-yellow-700 font-semibold border-yellow-300' };
+    } else {
+      return { statusText: 'ACTIVE', statusClass: 'text-gray-600' };
+    }
+  }
+
+  // ====================================================================
+  // 3. PERSISTENCE (Local Storage)
+  // ====================================================================
+
+  /**
+   * @returns {CertManagerData}
+   */
+  function getCurrentData() {
+    return {
+      employees,
+      logoBase64,
+      reminderEmails,
+      savedDate: new Date().toISOString()
+    };
+  }
+
+  function saveToLocalStorage() {
+    try {
+      localStorage.setItem("certManagerData", JSON.stringify(getCurrentData()));
+    } catch (err) {
+      console.error("Error saving data:", err);
+    }
+  }
+
+  function loadFromLocalStorage() {
+    try {
+      const saved = localStorage.getItem("certManagerData");
+      if (saved) {
+        /** @type {CertManagerData} */
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.employees)) {
+          employees = parsed.employees;
+        }
+        if (parsed.logoBase64) {
+          logoBase64 = parsed.logoBase64;
+        }
+        if (Array.isArray(parsed.reminderEmails)) {
+          reminderEmails = parsed.reminderEmails;
+        }
+      }
+    } catch (err) {
+      console.error("Error loading saved data:", err);
+    }
+  }
+
+  // Auto-save wrapper for all data mutations
+  function saveAndRender() {
+    saveToLocalStorage();
+    renderTable();
+    updateReminderSummary();
+  }
+
+  // ====================================================================
+  // 4. MODAL HANDLER
+  // ====================================================================
+
+  /**
+   * Opens a modal with custom HTML content.
+   * @param {string} title
+   * @param {string} innerHtml
+   */
+  function openModal(title, innerHtml) {
+    const modalHtml = `
+      <div class="flex justify-between items-center pb-3 border-b border-gray-200">
+        <h3 class="text-2xl font-semibold text-gray-900">${title}</h3>
+        <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 rounded-full p-2 transition">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+      <div class="mt-4 max-h-[80vh] overflow-y-auto pr-2">
+        ${innerHtml}
+      </div>
+    `;
+    modalContent.innerHTML = modalHtml;
+    modalBackdrop.classList.remove('hidden');
+    isModalOpen = true;
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  function closeModal() {
+    modalBackdrop.classList.add('hidden');
+    modalContent.innerHTML = '';
+    isModalOpen = false;
+    currentEmployee = null;
+    pendingDeleteType = null; // Clear confirmation state
+  }
+
+  // Close modal on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isModalOpen) {
+      closeModal();
+    }
+  });
+
+  // Close modal when clicking outside
+  modalBackdrop.addEventListener('click', (e) => {
+    if (e.target === modalBackdrop) {
+      closeModal();
+    }
+  });
+
+  // ====================================================================
+  // 5. EMPLOYEE CRUD & RENDER FUNCTIONS
+  // ====================================================================
+
+  function renderHeaderLogo() {
+    const logoEl = document.getElementById("uploadedLogo");
+    if (logoEl) {
+      logoEl.src = logoBase64 || "https://placehold.co/64x64/d0e0ff/333?text=LOGO";
+    }
+  }
+
+  function updateReminderSummary() {
+    const displayEl = document.getElementById('recipientListDisplay');
+    if (displayEl) {
+        displayEl.innerHTML = reminderEmails.length > 0 
+            ? `<span class="mono">${reminderEmails.join(', ')}</span>`
+            : `No recipients set. Click 'Settings' to configure email reminders.`;
+    }
+  }
+
+  /**
+   * Renders the employee table based on current data and search term.
+   */
+  function renderTable() {
+    console.log('Rendering table with employees:', employees);
+    const query = searchTerm.toLowerCase();
+    const filteredEmployees = employees.filter(emp =>
+      emp.firstName.toLowerCase().includes(query) ||
+      emp.lastName.toLowerCase().includes(query) ||
+      emp.email.toLowerCase().includes(query) ||
+      emp.certifications.some(cert => cert.type.toLowerCase().includes(query) || cert.details.toLowerCase().includes(query))
+    );
+
+    certTableBody.innerHTML = '';
+
+    if (filteredEmployees.length === 0) {
+      document.getElementById('noResults').classList.remove('hidden');
+      return;
+    } else {
+      document.getElementById('noResults').classList.add('hidden');
+    }
+
+    let rowsHtml = '';
+    filteredEmployees.forEach(emp => {
+      if (emp.certifications.length === 0) {
+        // Render employee with no certifications
+        rowsHtml += createRowHtml(emp, null, true);
+        return;
+      }
+
+      emp.certifications.forEach((cert, index) => {
+        const isFirstCert = index === 0;
+        rowsHtml += createRowHtml(emp, cert, isFirstCert);
+      });
+    });
+    
+    certTableBody.innerHTML = rowsHtml;
+    
+    if (window.lucide) { window.lucide.createIcons(); }
+  }
+
+  /**
+   * Creates the HTML table row for an employee/certification.
+   * @param {Employee} emp
+   * @param {Certification | null} cert
+   * @param {boolean} isFirstCert
+   * @returns {string}
+   */
+  function createRowHtml(emp, cert, isFirstCert) {
+    const rowSpan = isFirstCert ? emp.certifications.length || 1 : 0;
+    
+    let days = cert ? getDaysRemaining(cert.validTo) : Infinity;
+    let status = getExpiryStatus(days);
+    
+    // Escape single quotes in IDs for onclick handlers
+    const empIdEscaped = String(emp.id).replace(/'/g, "\\'");
+    const certIdEscaped = cert ? String(cert.id).replace(/'/g, "\\'") : '';
+    
+    const employeeInfoHtml = `
+      <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900" ${isFirstCert ? `rowspan="${rowSpan}"` : ''}>
+        <p class="font-semibold">${emp.firstName} ${emp.lastName}</p>
+        <p class="text-xs text-gray-500">${emp.email}</p>
+        <div class="mt-2 flex gap-2 no-print">
+          <button onclick="handleOpenForm('${empIdEscaped}')" class="text-xs text-indigo-500 hover:underline border border-indigo-200 rounded-md px-2 py-0.5"><i data-lucide="edit-2" class="w-3 h-3 inline mr-1"></i> Edit Info</button>
+          <button onclick="confirmDeleteEmployee('${empIdEscaped}')" class="text-xs text-red-500 hover:underline border border-red-200 rounded-md px-2 py-0.5"><i data-lucide="user-x" class="w-3 h-3 inline mr-1"></i> Delete</button>
+        </div>
+      </td>
+    `;
+
+    if (!cert) {
+        // Row for employee with no certifications
+        return `
+            <tr class="hover:bg-gray-50">
+                ${employeeInfoHtml}
+                <td class="px-3 py-2 text-gray-400 italic" colspan="5">No certifications recorded.</td>
+                <td class="px-3 py-2 whitespace-nowrap text-center no-print">
+                    <button onclick="handleOpenForm('${empIdEscaped}', true)" class="text-green-600 hover:text-green-800"><i data-lucide="plus" class="w-4 h-4 inline"></i> Add Cert</button>
+                </td>
+            </tr>`;
+    }
+
+    const certCells = `
+        <td class="px-3 py-2 text-gray-800">
+            <p class="font-medium">${cert.type}</p>
+            <p class="text-xs text-gray-500">${cert.details || 'N/A'}</p>
+        </td>
+        <td class="px-3 py-2 whitespace-nowrap text-gray-500 mono">${formatDate(cert.validFrom)}</td>
+        <td class="px-3 py-2 whitespace-nowrap text-gray-500 mono">${formatDate(cert.validTo)}</td>
+        <td class="px-3 py-2 whitespace-nowrap text-center font-bold text-sm ${status.statusClass}">
+            ${days < 0 ? Math.abs(days) + ' days ago' : (days === Infinity ? 'N/A' : days + ' days')}
+        </td>
+        <td class="px-3 py-2 whitespace-nowrap font-bold text-xs border-l-2 ${status.statusClass}">
+            ${status.statusText}
+        </td>
+        <td class="px-3 py-2 whitespace-nowrap text-center text-sm font-medium no-print">
+            <button onclick="handleOpenForm('${empIdEscaped}', false, '${certIdEscaped}')" class="text-blue-600 hover:text-blue-900 mr-2"><i data-lucide="edit-2" class="w-4 h-4 inline"></i></button>
+            <button onclick="confirmDeleteCert('${empIdEscaped}', '${certIdEscaped}')" class="text-red-600 hover:text-red-900"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
+        </td>
+    `;
+
+    if (isFirstCert) {
+      return `
+        <tr class="hover:bg-gray-50">
+          ${employeeInfoHtml}
+          ${certCells}
+        </tr>
+      `;
+    } else {
+      return `
+        <tr class="hover:bg-gray-50">
+          ${certCells}
+        </tr>
+      `;
+    }
+  }
+
+  // ====================================================================
+  // 6. FORM & MODAL RENDERING (EmployeeFormModal)
+  // ====================================================================
+
+  /**
+   * Sets up state and opens the Employee Form Modal.
+   * @param {string | null} employeeId
+   * @param {boolean} [addCert=false]
+   * @param {string | null} [certId=null]
+   */
+  function handleOpenForm(employeeId, addCert = false, certId = null) {
+      currentEmployee = employeeId ? employees.find(e => e.id === employeeId) : null;
+      isEditing = !!currentEmployee;
+      initialCertIndex = addCert ? 0 : -1; // Indicate a new cert row needs to be added or an existing one is being edited
+
+      renderForm();
+  }
+
+  function renderForm() {
+    const emp = currentEmployee || {
+        id: generateId(),
+        firstName: '', lastName: '', dateOfBirth: '', email: '', phone: '',
+        certifications: []
+    };
+    
+    const certs = emp.certifications.map(cert => ({...cert})); // Deep copy certs for editing
+
+    // If adding a cert, ensure at least one empty row exists
+    if (initialCertIndex !== -1 || certs.length === 0) {
+        // Only add a new empty row if there are no certs OR we explicitly requested to add one
+        if (certs.length === 0 || initialCertIndex !== -1) {
+            certs.push({ id: generateId(), type: 'Certification', details: '', validFrom: '', validTo: '' });
+        }
+    }
+
+    const certsHtml = certs.map(cert => createCertInputHtml(cert)).join('');
+
+    const innerHtml = `
+      <form id="employeeForm">
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="firstName" class="block text-sm font-medium text-gray-700">First Name</label>
+              <input type="text" id="firstName" value="${emp.firstName}" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+            </div>
+            <div>
+              <label for="lastName" class="block text-sm font-medium text-gray-700">Last Name</label>
+              <input type="text" id="lastName" value="${emp.lastName}" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+            </div>
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+              <input type="email" id="email" value="${emp.email}" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+            </div>
+            <div>
+              <label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
+              <input type="text" id="phone" value="${emp.phone}" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+            </div>
+            <div class="sm:col-span-2">
+              <label for="dateOfBirth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+              <input type="date" id="dateOfBirth" value="${emp.dateOfBirth}" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" />
+            </div>
+          </div>
+
+          <div class="border-t pt-4">
+            <h4 class="text-xl font-bold text-gray-800 mb-3 flex justify-between items-center">
+                Certifications
+                <button type="button" onclick="addCertRowToForm()" class="text-xs flex items-center px-2 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
+                    <i data-lucide="plus" class="w-3 h-3 mr-1"></i> Add Cert
+                </button>
+            </h4>
+            <div id="certsContainer" class="space-y-4">
+              ${certsHtml}
+            </div>
+          </div>
+
+          <div class="pt-4 flex justify-end gap-3">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300">Cancel</button>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 flex items-center">
+              <i data-lucide="save" class="w-5 h-5 mr-2"></i> ${isEditing ? 'Save Changes' : 'Add Employee'}
+            </button>
+          </div>
+        </div>
+      </form>
+    `;
+    openModal(isEditing ? `Edit ${emp.firstName} ${emp.lastName}` : 'Add New Employee', innerHtml);
+
+    document.getElementById('employeeForm').onsubmit = (e) => {
+      e.preventDefault();
+      saveForm();
+    };
+  }
+
+  /**
+   * Generates the HTML for a single certification input block.
+   * @param {Certification} cert
+   * @returns {string}
+   */
+  function createCertInputHtml(cert) {
+    const certTypes = ['Certification', 'Licence', 'Induction'];
+    const optionsHtml = certTypes.map(type => 
+        `<option value="${type}" ${cert.type === type ? 'selected' : ''}>${type}</option>`
+    ).join('');
+
+    return `
+      <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200 shadow-sm" data-cert-id="${cert.id}">
+        <input type="hidden" name="certId" value="${cert.id}" />
+        <div class="flex justify-end mb-2">
+            <button type="button" onclick="removeCertInput(this)" class="text-red-500 hover:text-red-700 rounded-full p-1 transition" title="Remove Certification">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600">Cert Type</label>
+            <select name="certType" class="block w-full border border-gray-300 rounded-md p-1.5 text-sm" required>
+                ${optionsHtml}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600">Valid From</label>
+            <input type="date" name="certValidFrom" value="${cert.validFrom}" class="block w-full border border-gray-300 rounded-md p-1.5 text-sm" required />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs font-medium text-gray-600">Details / Description</label>
+            <input type="text" name="certDetails" value="${cert.details}" placeholder="e.g. OSHA 30-hour course or State Bar" class="block w-full border border-gray-300 rounded-md p-1.5 text-sm" />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs font-medium text-gray-600">Valid To (Expiry Date)</label>
+            <input type="date" name="certValidTo" value="${cert.validTo}" class="block w-full border border-gray-300 rounded-md p-1.5 text-sm" required />
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function addCertRowToForm() {
+    const certsContainer = document.getElementById('certsContainer');
+    if (certsContainer) {
+      certsContainer.insertAdjacentHTML('beforeend', createCertInputHtml({ 
+        id: generateId(), 
+        type: 'Certification', 
+        details: '', 
+        validFrom: new Date().toISOString().substring(0, 10), // default to today
+        validTo: '' 
+      }));
+      if (window.lucide) { window.lucide.createIcons(); }
+    }
+  }
+
+  function removeCertInput(button) {
+    const certDiv = button.closest('[data-cert-id]');
+    if (certDiv) {
+      certDiv.remove();
+    }
+  }
+
+  /**
+   * Handles form submission for adding/editing an employee.
+   */
+  function saveForm() {
+    const form = document.getElementById('employeeForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const firstName = form.querySelector('#firstName').value.trim();
+    const lastName = form.querySelector('#lastName').value.trim();
+    const dateOfBirth = form.querySelector('#dateOfBirth').value;
+    const email = form.querySelector('#email').value.trim();
+    const phone = form.querySelector('#phone').value.trim();
+    
+    const certInputs = Array.from(form.querySelectorAll('[data-cert-id]'));
+
+    /** @type {Certification[]} */
+    const newCerts = certInputs.map(certDiv => ({
+      id: certDiv.querySelector('[name="certId"]').value,
+      type: certDiv.querySelector('[name="certType"]').value,
+      details: certDiv.querySelector('[name="certDetails"]').value.trim(),
+      validFrom: certDiv.querySelector('[name="certValidFrom"]').value,
+      validTo: certDiv.querySelector('[name="certValidTo"]').value,
+    })).filter(cert => cert.validTo && cert.validFrom); // Filter out certs missing dates
+
+    let employeeToSave = {
+        id: isEditing ? currentEmployee.id : generateId(),
+        firstName, lastName, dateOfBirth, email, phone,
+        certifications: newCerts,
+    };
+
+    if (isEditing) {
+      const empIndex = employees.findIndex(e => e.id === employeeToSave.id);
+      if (empIndex !== -1) {
+        employees[empIndex] = employeeToSave;
+      }
+    } else {
+      employees.push(employeeToSave);
+    }
+    
+    closeModal();
+    saveAndRender();
+  }
+
+  // ====================================================================
+  // 7. DELETION HANDLERS (ConfirmModal)
+  // ====================================================================
+
+  function confirmDeleteEmployee(employeeId) {
+    const emp = employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    pendingDeleteType = 'employee';
+    pendingDeleteEmpId = employeeId;
+    
+    renderConfirmModal(
+        'Confirm Employee Deletion',
+        `Are you sure you want to permanently delete **${emp.firstName} ${emp.lastName}** and all ${emp.certifications.length} of their associated certifications? This cannot be undone.`
+    );
+  }
+
+  function confirmDeleteCert(employeeId, certId) {
+    const emp = employees.find(e => e.id === employeeId);
+    const cert = emp ? emp.certifications.find(c => c.id === certId) : null;
+    if (!emp || !cert) return;
+
+    pendingDeleteType = 'cert';
+    pendingDeleteEmpId = employeeId;
+    pendingDeleteCertId = certId;
+    
+    renderConfirmModal(
+        'Confirm Certification Deletion',
+        `Are you sure you want to delete the **${cert.type}: ${cert.details}** certification for ${emp.firstName} ${emp.lastName}?`
+    );
+  }
+
+  function renderConfirmModal(title, message) {
+    const innerHtml = `
+        <div class="text-lg text-gray-700 mb-6">
+            <p>${message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>
+        </div>
+        <div class="flex justify-end gap-3">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300">Cancel</button>
+            <button type="button" onclick="executePendingDelete()" class="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700">
+                Yes, Delete
+            </button>
+        </div>
+    `;
+    openModal(title, innerHtml);
+  }
+
+  function executePendingDelete() {
+    if (pendingDeleteType === 'employee') {
+      const index = employees.findIndex(e => e.id === pendingDeleteEmpId);
+      if (index !== -1) {
+        employees.splice(index, 1);
+      }
+    } else if (pendingDeleteType === 'cert') {
+      const emp = employees.find(e => e.id === pendingDeleteEmpId);
+      if (emp) {
+        emp.certifications = emp.certifications.filter(c => c.id !== pendingDeleteCertId);
+      }
+    }
+    
+    closeModal();
+    saveAndRender();
+  }
+
+  // ====================================================================
+  // 8. REMINDER SETTINGS (ReminderSettingsModal)
+  // ====================================================================
+
+  function openReminderSettings() {
+    renderSettingsModal();
+  }
+
+  function renderSettingsModal() {
+    const innerHtml = `
+      <form id="reminderSettingsForm">
+        <h4 class="text-xl font-bold text-gray-800 mb-3">Email Reminder Recipients</h4>
+        <p class="text-sm text-gray-600 mb-4">Enter email addresses, separated by commas, who should receive the weekly expiry reminder reports.</p>
+        
+        <div>
+          <label for="emailsInput" class="block text-sm font-medium text-gray-700">Recipient Emails</label>
+          <textarea id="emailsInput" rows="4" placeholder="manager@company.com, hr@company.com" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">${reminderEmails.join(', ')}</textarea>
+        </div>
+
+        <div class="pt-6 flex justify-end gap-3">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300">Cancel</button>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 flex items-center">
+              <i data-lucide="save" class="w-5 h-5 mr-2"></i> Save Settings
+            </button>
+        </div>
+      </form>
+    `;
+    openModal('Reminder Settings', innerHtml);
+
+    document.getElementById('reminderSettingsForm').onsubmit = (e) => {
+        e.preventDefault();
+        saveReminderSettings();
+    };
+  }
+
+  function saveReminderSettings() {
+    const form = document.getElementById('reminderSettingsForm');
+    const emailsText = form.querySelector('#emailsInput').value.trim();
+    
+    // Simple validation and sanitization
+    const newEmails = emailsText
+        .split(',')
+        .map(email => email.trim().toLowerCase())
+        .filter(email => email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)); // Basic email regex
+
+    reminderEmails = newEmails;
+    closeModal();
+    saveAndRender(); // Save settings and update summary
+  }
+
+
+  // ====================================================================
+  // 9. IMPORT LOGIC
+  // ====================================================================
+
+  const importFileInput = document.getElementById('importFileInput');
+  document.getElementById('importBtn').onclick = () => {
+    importFileInput.click();
+  };
+
+  importFileInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/json') {
+      openModal('Error', '<p class="text-red-600">Please select a valid JSON file.</p>');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        /** @type {CertManagerData} */
+        const importedData = JSON.parse(ev.target.result);
+        
+        if (!importedData.employees || !Array.isArray(importedData.employees)) {
+          openModal('Import Error', '<p class="text-red-600">JSON file is missing the required "employees" array.</p>');
+          return;
+        }
+
+        // Overwrite global state with imported data
+        employees = importedData.employees;
+        if (importedData.logoBase64) logoBase64 = importedData.logoBase64;
+        if (Array.isArray(importedData.reminderEmails)) reminderEmails = importedData.reminderEmails;
+
+        openModal('Import Successful', `<p class="text-green-600">Successfully imported ${employees.length} employee records.</p>`);
+        saveAndRender();
+        renderHeaderLogo();
+      } catch (error) {
+        openModal('Import Error', `<p class="text-red-600">Failed to parse JSON content. Error: ${error.message}</p>`);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Clear file input
+  };
+
+
+  // ====================================================================
+  // 10. EXPORT LOGIC
+  // ====================================================================
+  
+  /**
+   * Universal function to trigger file download.
+   * @param {string} filename 
+   * @param {string} content 
+   * @param {string} mimeType 
+   */
+  function downloadFile(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Escapes CSV field values
+   */
+  function escapeCsvValue(value) {
+    if (value === null || value === undefined) return '';
+    const strValue = String(value);
+    // If contains comma, quote, or newline, wrap in quotes and escape quotes
+    if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n')) {
+      return '"' + strValue.replace(/"/g, '""') + '"';
+    }
+    return strValue;
+  }
+
+  /**
+   * Prepares and exports data based on the requested format.
+   * @param {'json' | 'csv' | 'excel' | 'pdf'} format 
+   */
+  function exportData(format) {
+    document.getElementById('exportDropdownMenu').classList.add('hidden');
+
+    const reportData = employees.flatMap(emp => 
+        emp.certifications.length > 0
+            ? emp.certifications.map(cert => ({ 
+                'First Name': emp.firstName,
+                'Last Name': emp.lastName,
+                'Date of Birth': emp.dateOfBirth || 'N/A',
+                'Contact Number': emp.phone || 'N/A',
+                'Certificate or Licence or Induction': cert.type,
+                'Number of Certificate or Licence or Induction': cert.details || 'N/A',
+                'Valid From': cert.validFrom,
+                'Valid To': cert.validTo,
+                'Status': getExpiryStatus(getDaysRemaining(cert.validTo)).statusText,
+            }))
+            : [{ // Employee with no certs
+                'First Name': emp.firstName,
+                'Last Name': emp.lastName,
+                'Date of Birth': emp.dateOfBirth || 'N/A',
+                'Contact Number': emp.phone || 'N/A',
+                'Certificate or Licence or Induction': 'N/A',
+                'Number of Certificate or Licence or Induction': 'N/A',
+                'Valid From': 'N/A',
+                'Valid To': 'N/A',
+                'Status': 'N/A',
+            }]
+    );
+    
+    const timestamp = new Date().toISOString().substring(0, 10);
+    const filenameBase = `cert_report_${timestamp}`;
+
+    if (format === 'json') {
+      const dataToExport = getCurrentData();
+      downloadFile(`${filenameBase}.json`, JSON.stringify(dataToExport, null, 2), 'application/json');
+    } else if (format === 'csv') {
+      const csv = convertToCsv(reportData);
+      downloadFile(`${filenameBase}.csv`, csv, 'text/csv;charset=utf-8;');
+    } else if (format === 'excel') {
+      const xml = convertToExcelXml(reportData);
+      downloadFile(`${filenameBase}.xls`, xml, 'application/vnd.ms-excel');
+    } else if (format === 'pdf') {
+      // Update print header with logo and date before printing
+      const printLogo = document.getElementById('printLogo');
+      const printDate = document.getElementById('printDate');
+      if (printLogo) {
+        printLogo.src = logoBase64 || "https://placehold.co/120x120/d0e0ff/333?text=LOGO";
+      }
+      if (printDate) {
+        const now = new Date();
+        printDate.textContent = `Generated on: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`;
+      }
+      window.print();
+    }
+  }
+
+  /**
+   * Converts array of objects to CSV string.
+   * @param {object[]} data 
+   * @returns {string}
+   */
+  function convertToCsv(data) {
+    if (data.length === 0) return '';
+    const headers = Object.keys(data[0]);
+    const csvRows = [
+        headers.map(h => escapeCsvValue(h)).join(','), // Headers
+        ...data.map(row => 
+            headers.map(fieldName => escapeCsvValue(row[fieldName])).join(',')
+        )
+    ];
+    return csvRows.join('\r\n');
+  }
+
+  /**
+   * Converts array of objects to Excel-readable XML format (HTML table format that Excel accepts).
+   * @param {object[]} data 
+   * @returns {string}
+   */
+  function convertToExcelXml(data) {
+    if (data.length === 0) {
+      return '<html><body><table><tr><td>No data</td></tr></table></body></html>';
+    }
+    
+    const headers = Object.keys(data[0]);
+    
+    // Escape HTML special characters
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">\n';
+    html += '<head>\n';
+    html += '<meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">\n';
+    html += '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>\n';
+    html += '<x:Name>Certifications</x:Name>\n';
+    html += '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>\n';
+    html += '</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->\n';
+    html += '<style>\n';
+    html += 'table { border-collapse: collapse; width: 100%; }\n';
+    html += 'th { background-color: #4472C4; color: white; font-weight: bold; padding: 8px; text-align: left; border: 1px solid #ddd; }\n';
+    html += 'td { padding: 8px; text-align: left; border: 1px solid #ddd; }\n';
+    html += '.status-expired { color: #C00000; font-weight: bold; }\n';
+    html += '.status-expiring { color: #FF6600; font-weight: bold; }\n';
+    html += '</style>\n';
+    html += '</head>\n';
+    html += '<body>\n';
+    html += '<table>\n';
+    
+    // Header row
+    html += '<tr>\n';
+    headers.forEach(h => {
+      html += `<th>${escapeHtml(h)}</th>\n`;
+    });
+    html += '</tr>\n';
+
+    // Data rows
+    data.forEach(row => {
+      html += '<tr>\n';
+      headers.forEach(header => {
+        let value = row[header];
+        let cellClass = '';
+        
+        // Apply styling for Status column
+        if (header === 'Status') {
+          if (value === 'EXPIRED') {
+            cellClass = ' class="status-expired"';
+          } else if (value === 'EXPIRING SOON') {
+            cellClass = ' class="status-expiring"';
+          }
+        }
+        
+        html += `<td${cellClass}>${escapeHtml(value)}</td>\n`;
+      });
+      html += '</tr>\n';
+    });
+
+    html += '</table>\n';
+    html += '</body>\n';
+    html += '</html>';
+    
+    return html;
+  }
+
+  // ====================================================================
+  // 11. EVENT LISTENERS & INITIALIZATION
+  // ====================================================================
+
+  // Employee/Cert Add Button
+  document.getElementById('addEmployeeBtn').onclick = () => handleOpenForm(null);
+
+  // Reminder Settings Button
+  document.getElementById('reminderSettingsBtn').onclick = openReminderSettings;
+
+  // Search Input Handler
+  searchInput.oninput = (e) => {
+    searchTerm = e.target.value;
+    renderTable();
+  };
+
+  // Logo upload handling
+  logoInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      logoBase64 = ev.target.result;
+      renderHeaderLogo();
+      saveToLocalStorage();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // Dropdown Toggle
+  document.getElementById('exportDropdownBtn').onclick = (e) => {
+    e.stopPropagation();
+    document.getElementById('exportDropdownMenu').classList.toggle('hidden');
+  };
+
+  // Close dropdown when clicking anywhere else
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('exportDropdownContainer').contains(e.target)) {
+      document.getElementById('exportDropdownMenu').classList.add('hidden');
+    }
+  });
+
+
+  // Initial Load
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded');
+    loadFromLocalStorage();
+    console.log('After loading, employees:', employees);
+    
+    // Add some initial dummy data if storage is empty for quick start
+    if (employees.length === 0) {
+      console.log('No employees found, adding sample data');
+      employees = [
+        {
+          id: generateId(),
+          firstName: 'Alice', lastName: 'Smith', dateOfBirth: '1985-06-15', email: 'alice@corp.com', phone: '555-0101',
+          certifications: [
+            { id: generateId(), type: 'Certification', details: 'Forklift Operator License', validFrom: '2024-01-01', validTo: '2025-01-01' },
+            { id: generateId(), type: 'Induction', details: 'Basic Fire Safety', validFrom: '2024-10-18', validTo: '2024-11-18' }
+          ]
+        },
+        {
+          id: generateId(),
+          firstName: 'Bob', lastName: 'Johnson', dateOfBirth: '1992-11-20', email: 'bob@corp.com', phone: '555-0102',
+          certifications: [
+            { id: generateId(), type: 'Licence', details: 'OSHA 10-Hour', validFrom: '2023-01-01', validTo: '2023-10-10' }
+          ]
+        },
+        {
+          id: generateId(),
+          firstName: 'Charlie', lastName: 'Brown', dateOfBirth: '1970-01-01', email: 'charlie@corp.com', phone: '555-0103',
+          certifications: []
+        }
+      ];
+      saveToLocalStorage();
+      console.log('Sample data added');
+    }
+    
+    if (window.lucide) { window.lucide.createIcons(); }
+    renderHeaderLogo();
+    updateReminderSummary();
+    renderTable();
+    console.log('Initial render complete');
+  });
+
+</script>
+</body>
+</html>
